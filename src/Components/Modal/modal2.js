@@ -33,13 +33,12 @@ class Modal extends React.Component {
     return (
         <div>
         <Navbar color="dark" dark expand="md">
-          <NavbarBrand href="/">Twitter Live Filtering Service</NavbarBrand>
+          <NavbarBrand href="/">SF - Restaurant Scores</NavbarBrand>
             <Nav className="ml-auto" navbar>
               <NavItem>
                 <NavLink href="https://github.com/rupeshdabbir">GitHub</NavLink>
               </NavItem>
             </Nav>
-          <Button variant="outline-dark" onClick={() => this.simpleDialog.show()}>Add Filter</Button>
         </Navbar>
         <SkyLight hideOnOverlayClicked ref={ref => this.simpleDialog = ref} title="Please make your filter criteria and click Save!">
             <Filter onFilterChange={this.onFilterChange.bind(this)} onFilterSelected={this.props.onFilterSelected} />

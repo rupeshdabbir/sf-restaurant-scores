@@ -41,3 +41,7 @@ export function getFilteredData(filter, data, key) {
     return result;
  }
  
+ export function assignScore(data) {
+     console.log("Inside Assign score", data);
+
+ }

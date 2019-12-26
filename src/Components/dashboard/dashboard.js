@@ -5,7 +5,8 @@ import ReactTable from "react-table";
 import "react-table/react-table.css";
 import comparator from "../../utils/comparator";
 import Modal from '../Modal/modal2';
-import { buildKey, getFilteredData } from '../../lib/dataManipulator';
+import { buildKey, getFilteredData, assignScore } from '../../lib/dataManipulator';
+import { sanitizeData } from '../../lib/sanitizeData';
 
 // Heap Initialization
 const { Heap } = require('heap-js');
@@ -31,6 +32,8 @@ class Dashboard extends Component {
     this.maxHeap = new Heap(comparator);
     this.maxHeap.init([]);
 
+    this.data = '';
+
     this.state = {
       data: this.maxHeap.toArray(),
       filterEnabled: false,
@@ -39,106 +42,57 @@ class Dashboard extends Component {
 
     this.columns = [
       {
-        Header: "Tweet",
-        accessor: "tweet"
+        Header: "Business Name",
+        accessor: "business_name"
       },
       {
-        Header: "User",
-        accessor: "user"
+        Header: "Address",
+        accessor: "business_address"
       },
       {
-        Header: "Retweet Count",
-        accessor: "retweet_count"
+        Header: "Zipcode",
+        accessor: "business_postal_code"
       },
       {
-        Header: "Created At",
-        accessor: "created_at"
+        Header: "Phone",
+        accessor: "business_phone_number"
       },
       {
-        Header: "Verified",
-        accessor: "verified"
+        Header: "Inspection Score",
+        accessor: "inspection_score"
       },
       {
-        Header: "Language",
-        accessor: "lang"
+        Header: "Risk",
+        accessor: "risk_category"
+      },
+      {
+        Header: "Confidence Grade",
+        accessor: "grade"
       }
     ];
-
-    // this.eventSource = new EventSource("http://tweet-service.herokuapp.com/stream");
-    // this.getLatestTweets.then(e => console.log("Init Heap Updated"));
   }
 
   componentDidMount() {
-    // this.eventSource.onmessage = e => {
-    //   this.updateHeap(JSON.parse(e.data));
-    // }
-    this.getLatestTweets().then(e => {
-      console.log("Finished Loading for the first Time!");
-      this.retryTweetFetch();
-    });
+    this.fetchRestaurantData()
+      .then(res => sanitizeData(res))
+      .then(data => this.setState({ data })  );
 
   }
 
   /* 
-   * Async Component:
-   * Logic to fetch latest tweets and then update Heap.
-   * This returns a promise.
-   */
-  getLatestTweets() {
-    let limit = MAX_SIZE;
-    return new Promise((resolve, reject) => {
-      let source = new EventSource('https://tweet-service.herokuapp.com/stream');
-  
-      source.onmessage = ({data}) => {
-        if (limit-- > 0) {
-          this.updateHeap(JSON.parse(data));
-        } else {
-          // resolve this promise once we have reached the specified limit
-          resolve(this.maxHeap);
-          source.close();
-        }
-      }
-    });
-  }
-
-  /* 
-   * This function is responsible for refetching tweets for RETRY_INTERVAL_TIME.
-   * All the parameters are configurable.
-   * The function fetches an increment of 100 tweets everytime it's pulled in!
+   * Async Function: 
+   * Retrieve Restaurant data will fetch data from the following Data sets:
+   * https://data.sfgov.org/Health-and-Social-Services/Restaurant-Scores-LIVES-Standard/pyih-qa8i
+   * 
    */
 
-  retryTweetFetch() {
-    MAX_SIZE += 100;
-
-    setInterval(() => {
-      this.getLatestTweets().then(e => {
-        console.log("Fetching Subsequent Tweets for every 10 sec");
+  fetchRestaurantData() {
+    return fetch('https://data.sfgov.org/resource/pyih-qa8i.json')
+      .then(data => data.json())
+      .then(res => {
+        this.data = res;
+        return res;
       });
-    }, RETRY_INTERVAL_TIME);
-  }
-
-  /* 
-   * Util responsible for updating Max-Heap on Front-end.
-   */
-  updateHeap(newData) {
-    this.maxHeap.push(newData);
-    const data = this.maxHeap.toArray();
-    this.updateUI(data);
-  }
-
-  /* 
-   * Render function that renders the data according to the Filter selected.
-   * TODO: Need to implement clearFilter method!
-   */
-  updateUI(newData) {
-    console.log("Updating UI: Filter", this.state.filterEnabled);
-    if(!this.state.filterEnabled) {
-      const setFN = () => this.setState({ data: newData })
-      const setFn = this.debounce(setFN, 1000);
-      setFn();
-    } else {
-      this.fetchFilteredData();
-    }
   }
 
   /* 
@@ -200,7 +154,7 @@ class Dashboard extends Component {
     return (
       <div className="App">
         <Modal onFilterSelected={this.onFilterSelected.bind(this)} />
-        <ReactTable data={this.state.data} columns={this.columns} />
+        <ReactTable filterable data={this.state.data} columns={this.columns} />
       </div>
     );
   }
